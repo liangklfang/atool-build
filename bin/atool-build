@@ -6,6 +6,7 @@ program
   .version(require('../package').version, '-v, --version')
   .option('-o, --output-path <path>', 'output path')
   .option('-w, --watch [delay]', 'watch file changes and rebuild')
+  .option('--cwd', 'current work dir')
   .option('--hash', 'build with hash and output map.json')
   .option('--publicPath <publicPath>', 'publicPath for webpack')
   .option('--devtool <devtool>', 'sourcemap generate method, default is null')
@@ -15,7 +16,7 @@ program
   .option('--verbose', 'run with more logging messages.')
   .parse(process.argv);
 
-program.cwd = process.cwd();
+program.cwd = program.cwd || process.cwd();
 
 if (program.watch) {
   require('../lib/build')(program);

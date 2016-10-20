@@ -1,106 +1,178 @@
-import { join, resolve } from 'path';
-import { writeFileSync } from 'fs';
 import webpack, { ProgressPlugin } from 'webpack';
 import chalk from 'chalk';
-import mergeCustomConfig from './mergeCustomConfig';
-import getWebpackCommonConfig from './getWebpackCommonConfig';
+import existsSync from 'fs-exists-sync';
+import ExtractTextPlugin from 'extract-text-webpack-plugin';
+import MapJsonPlugin from 'map-json-webpack-plugin';
 
-function getWebpackConfig(args) {
-  let webpackConfig = getWebpackCommonConfig(args);
+import { resolve, join } from 'path';
 
-  webpackConfig.plugins = webpackConfig.plugins || [];
+import loaderOpts from './loaders';
+import pluginOpts from './plugins';
+import { configManager } from './helper';
 
-  // Config outputPath.
-  if (args.outputPath) {
-    webpackConfig.output.path = args.outputPath;
-  }
+function mergeCfgFromBin(args, cfgManager, configInitializedObj) {
+  const pkgPath = join(args.cwd, 'package.json');
+  const pkg = existsSync(pkgPath) ? require(pkgPath) : {};// eslint-disable-line
 
-  if (args.publicPath) {
-    webpackConfig.output.publicPath = args.publicPath;
-  }
-
-  // Config if no --no-compress.
-  if (args.compress) {
-    webpackConfig.UglifyJsPluginConfig = {
-      output: {
-        ascii_only: true,
-      },
-      compress: {
-        warnings: false,
-      },
-    };
-    webpackConfig.plugins = [...webpackConfig.plugins,
-      new webpack.optimize.UglifyJsPlugin(webpackConfig.UglifyJsPluginConfig),
-      new webpack.DefinePlugin({
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-      }),
-    ];
-  } else {
-    if (process.env.NODE_ENV) {
-      webpackConfig.plugins = [...webpackConfig.plugins,
-        new webpack.DefinePlugin({
-          'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-        }),
-      ];
-    }
-  }
-
-  webpackConfig.plugins = [...webpackConfig.plugins,
-    new webpack.optimize.DedupePlugin(),
-    new webpack.NoErrorsPlugin(),
+  const emptyBuildins = [
+    'child_process',
+    'cluster',
+    'dgram',
+    'dns',
+    'fs',
+    'module',
+    'net',
+    'readline',
+    'repl',
+    'tls',
   ];
 
-  // Output map.json if hash.
-  if (args.hash) {
-    const pkg = require(join(args.cwd, 'package.json'));
-    webpackConfig.output.filename = webpackConfig.output.chunkFilename = '[name]-[chunkhash].js';
-    webpackConfig.plugins = [...webpackConfig.plugins,
-      require('map-json-webpack-plugin')({
-        assetsPath: pkg.name,
-      }),
-    ];
+  const browser = pkg.browser || {};
+
+  const node = emptyBuildins.reduce((obj, name) => {
+    if (!(name in browser)) {
+      return { ...obj, ...{ [name]: 'empty' } };
+    }
+    return obj;
+  }, {});
+
+  configInitializedObj.base().modify('node', node);
+
+  let theme;
+  if (pkg.theme && typeof pkg.theme === 'string') {
+    let cfgPath = pkg.theme;
+    // relative path
+    if (cfgPath.charAt(0) === '.') {
+      cfgPath = resolve(args.cwd, cfgPath);
+    }
+    const getThemeConfig = require(cfgPath);// eslint-disable-line
+    theme = getThemeConfig();
+  } else if (pkg.theme && typeof pkg.theme === 'object') {
+    theme = pkg.theme;
   }
 
-  webpackConfig = mergeCustomConfig(webpackConfig, resolve(args.cwd, args.config || 'webpack.config.js'));
+  if (theme) {
+    cfgManager.loadersOpts.lessLoaderQuery.modifyVars = theme;
+    const lessLoaderOpt = configInitializedObj.loaders().get('lessLoader');
+    lessLoaderOpt.loader.loader.pop().push({
+      loader: 'less-loader',
+      query: cfgManager.loadersOpts.lessLoaderQuery,
+    });
+    configInitializedObj.loaders()
+      .set('lessLoader', lessLoaderOpt);
 
-  return webpackConfig;
-}
+    const lessLoaderWithModule = configInitializedObj.loaders().get('lessLoaderWithModule');
+    lessLoaderWithModule.loader.loader.pop().push({
+      loader: 'less-loader',
+      query: cfgManager.loadersOpts.lessLoaderQuery,
+    });
+    configInitializedObj.loaders()
+      .set('lessLoaderWithModule', lessLoaderWithModule);
+  }
 
-export default function build(args, callback) {
-  // Get config.
-  let webpackConfig = getWebpackConfig(args);
-  webpackConfig = Array.isArray(webpackConfig) ? webpackConfig : [webpackConfig];
+  if (pkg.entry) {
+    configInitializedObj.base().modify('entry', pkg.entry);
+  }
 
-  let fileOutputPath;
-  webpackConfig.forEach(config => {
-    fileOutputPath = config.output.path;
-  });
+  if (args.outputPath) {
+    const output = configInitializedObj.base().get('output');
+    output.path = args.outputPath;
+    configInitializedObj.base().modify('output', output);
+  }
 
-  if (args.watch) {
-    webpackConfig.forEach(config => {
-      config.plugins.push(
-        new ProgressPlugin((percentage, msg) => {
-          const stream = process.stderr;
-          if (stream.isTTY && percentage < 0.71) {
-            stream.cursorTo(0);
-            stream.write(`📦  ${chalk.magenta(msg)}`);
-            stream.clearLine(1);
-          } else if (percentage === 1) {
-            console.log(chalk.green('\nwebpack: bundle build is now finished.'));
-          }
-        })
-      );
+  if (args.hash) {
+    configInitializedObj.plugins()
+      .remove('extractTextPlugin')
+      .set('extractTextPlugin', new ExtractTextPlugin({
+        filename: '[name]-[chunkhash].css',
+        disable: false,
+        allChunks: true,
+      }))
+      .set('mapJsonPlugin', new MapJsonPlugin({
+        assetsPath: pkg.name,
+      }));
+
+    const output = configInitializedObj.base().get('output');
+    configInitializedObj.base().modify('output', {
+      ...output,
+      ...{
+        filename: '[name]-[chunkhash].js',
+        chunkFilename: '[name]-[chunkhash].js',
+      },
     });
   }
 
-  function doneHandler(err, stats) {
-    if (args.json) {
-      const filename = typeof args.json === 'boolean' ? 'build-bundle.json' : args.json;
-      const jsonPath = join(fileOutputPath, filename);
-      writeFileSync(jsonPath, JSON.stringify(stats.toJson()), 'utf-8');
-      console.log(`Generate Json File: ${jsonPath}`);
+  if (args.publicPath) {
+    const output = configInitializedObj.base().get('output');
+    configInitializedObj.base().modify('output', {
+      ...output,
+      ...{
+        publicPath: args.publicPath,
+      },
+    });
+  }
+
+  if (args.devtool) {
+    configInitializedObj.base().modify('devtool', args.devtool);
+  }
+
+  if (!args.compress) {
+    cfgManager.pluginOpts.loaderOptionsPluginOpts.minimize = false;
+
+    configInitializedObj.plugins()
+      .remove('loaderOptionsPlugin')
+      .set('loaderOptionsPlugin', new webpack.LoaderOptionsPlugin(cfgManager.pluginOpts.loaderOptionsPluginOpts))
+      .remove('uglifyJsPlugin');
+  }
+
+  if (args.verbose) {
+    configInitializedObj.base().set('profile', true);
+  }
+
+  if (args.json) {
+    const roPath = resolve(args.cwd, 'build/records.json');
+    configInitializedObj.base()
+      .set('recordsOutputPath', roPath);
+    console.log('\n  webpack: the records json file will output at ->');
+    console.log(`  ${chalk.green(roPath)} \n`);
+  }
+
+  if (args.watch) {
+    configInitializedObj.plugins()
+      .set('progressPlugin', new ProgressPlugin((percentage, msg) => {
+        const stream = process.stderr;
+        if (stream.isTTY && percentage < 0.71) {
+          stream.cursorTo(0);
+          stream.write(`📦  ${chalk.magenta(msg)}`);
+          stream.clearLine(1);
+        } else if (percentage === 1) {
+          console.log(chalk.green('\nwebpack: bundle build is now finished.'));
+        }
+      }));
+  }
+}
+
+export default function build(args, callback) {
+  let configInitializedObj;
+  // check configManager is had initialized
+  if (configManager.isInitialized) {
+    const customConfigPath = resolve(args.cwd, args.config || 'webpack.config.js');
+    if (!existsSync(customConfigPath)) {
+      // error
     }
 
+    configInitializedObj = require(customConfigPath);// eslint-disable-line
+  } else {
+    configInitializedObj = configManager.init({
+      loaderOpts,
+      pluginOpts,
+    });
+  }
+  mergeCfgFromBin(args, configManager, configInitializedObj);
+
+  const webpackConfig = configInitializedObj.resolveAll();
+
+  function doneHandler(err, stats) {
     const { errors } = stats.toJson();
     if (errors && errors.length) {
       process.on('exit', () => {
@@ -112,12 +184,13 @@ export default function build(args, callback) {
     if (!args.watch || stats.hasErrors()) {
       const buildInfo = stats.toString({
         colors: true,
-        children: true,
+        children: !!args.verbose,
         chunks: !!args.verbose,
         modules: !!args.verbose,
         chunkModules: !!args.verbose,
         hash: !!args.verbose,
         version: !!args.verbose,
+        name: 'extract-text-webpack-plugin',
       });
       if (stats.hasErrors()) {
         console.error(buildInfo);
@@ -140,17 +213,6 @@ export default function build(args, callback) {
 
   // Run compiler.
   const compiler = webpack(webpackConfig);
-
-  // Hack: remove extract-text-webpack-plugin log
-  if (!args.verbose) {
-    compiler.plugin('done', (stats) => {
-      stats.stats.forEach((stat) => {
-        stat.compilation.children = stat.compilation.children.filter((child) => {// eslint-disable-line
-          return child.name !== 'extract-text-webpack-plugin';
-        });
-      });
-    });
-  }
 
   if (args.watch) {
     compiler.watch(args.watch || 200, doneHandler);

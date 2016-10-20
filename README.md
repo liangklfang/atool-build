@@ -58,11 +58,7 @@ $ atool-build -h
 让 `webpack.config.js` 输出 `Function`, 比如:
 
 ```javascript
-var path = require("path");
-module.exports = function(webpackConfig) {
-  webpackConfig.output.path = path.join(__dirname, './public');
-  return webpackConfig;
-};
+// todo
 ```
 
 参数:
@@ -77,6 +73,4 @@ module.exports = function(webpackConfig) {
 
 > 如何在 webpack.config.js 中引用 webpack ? (新增插件需要) 
 
-`var webpack = require('atool-build/lib/webpack');`
-
-[#32](https://github.com/ant-tool/atool-build/issues/32)
+//todo
