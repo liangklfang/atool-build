@@ -1,21 +1,30 @@
+import I18nPlugin from 'i18n-webpack-plugin';
+import webpack, { getBaseOpts, configManager } from '../../../src/helper';
 
-var I18nPlugin = require("i18n-webpack-plugin");
-
-var langs = {
+const baseOpts = getBaseOpts();
+const langs = {
   "en": null,
   "de": require("./de.json")
 };
 
-module.exports = function(webpackConfig) {
-  return Object.keys(langs).map(function(lang) {
-    return Object.assign({}, webpackConfig, {
-      name: lang,
-      output: Object.assign({}, webpackConfig.output, {
-        filename: 'app.' + lang + '.js',
-      }),
-      plugins: [].concat(webpackConfig.plugins, new I18nPlugin(
+module.exports = function() {
+  return Object.keys(langs).map((lang) => {
+    return () => {
+      const obj = configManager.init({
+        baseOpts: {
+          ...baseOpts,
+          output: {
+            ...baseOpts.output,
+            filename: `app.${lang}.js`,
+          },
+        },
+      });
+      obj.base().set('name', lang);
+      obj.plugins().set('i18nPlugin', new I18nPlugin(
         langs[lang]
-      )),
-    });
+      ));
+
+      return obj;
+    }
   });
 };

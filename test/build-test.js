@@ -18,7 +18,8 @@ function assert(actualDir, _expect) {
 function testBuild(args, fixture) {
   return new Promise(resolve => {
     const cwd = join(__dirname, 'fixtures', fixture);
-    const outputPath = join(cwd, 'dist');
+    const dist = args.outputPath || 'dist';
+    const outputPath = join(cwd, dist);
     process.chdir(cwd);
 
     const defaultConfig = {
@@ -35,7 +36,6 @@ function testBuild(args, fixture) {
 }
 
 describe('lib/build', function () {
-  this.timeout(50000);
   it('should build normally', () => {
     return testBuild({hash:true}, 'build-normal');
   });
@@ -61,13 +61,12 @@ describe('lib/build', function () {
     return testBuild({}, 'build-node-builtins');
   });
   it('should support mergeCustomConfig plugins', () => {
-    return testBuild({hash:true}, 'build-mergeCustomConfig-plugins');
+    return testBuild({}, 'build-mergeCustomConfig-plugins');
   });
   it('should support mergeCustomConfig environment production', () => {
     return testBuild({compress:true}, 'build-mergeCustomConfig-environment-production');
   });
   it('should support mergeCustomConfig environment development', () => {
-    process.env.NODE_ENV = 'development';
     return testBuild({}, 'build-mergeCustomConfig-environment-development');
   });
   it('should support config', () => {
@@ -93,5 +92,14 @@ describe('lib/build', function () {
   });
   it('should support theme', () => {
     return testBuild({}, 'build-theme');
+  });
+  it('should build outputPath', () => {
+    return testBuild({outputPath: './www'}, 'build-outputPath');
+  });
+  it('should build publicPath', () => {
+    return testBuild({publicPath: 'http:test.com/'}, 'build-publicPath');
+  });
+  it('should build record json', () => {
+    return testBuild({json:'./dist'}, 'build-record-json');
   });
 });

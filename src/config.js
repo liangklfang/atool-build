@@ -1,30 +1,19 @@
-import { join, resolve } from 'path';
-
 import webpack from 'webpack';
 import CaseSensitivePathsPlugin from 'case-sensitive-paths-webpack-plugin';
 import ExtractTextPlugin from 'extract-text-webpack-plugin';
 
-export default function setCfg(configManager, configInitializedObj) {
-  const pluginOpts = configManager.pluginOpts;
-  const loaderOpts = configManager.loaderOpts;
-
+export default function setCfg(opts, configInitializedObj) {
+  const baseOpts = opts.baseOpts;
+  const pluginOpts = {...{}, ...opts.pluginOpts};
+  const loaderOpts = opts.loaderOpts;
   // set base config
   configInitializedObj.base()
-    .set('output', {
-      path: join(process.cwd(), './dist/'),
-      filename: '[name].js',
-      chunkFilename: '[name].js',
-    })
-    .set('devtool', '')
-    .set('resolve', {
-      modules: [resolve(__dirname, '../node_modules'), 'node_modules'],
-      extensions: ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.ts', '.tsx', '.js', '.jsx', '.json'],
-    })
-    .set('resolveLoader', {
-      modules: [resolve(__dirname, '../node_modules'), 'node_modules'],
-    })
-    .set('entry', {})
-    .set('node', {});
+    .set('output', baseOpts.output)
+    .set('devtool', baseOpts.devtool)
+    .set('resolve', baseOpts.resolve)
+    .set('resolveLoader', baseOpts.resolveLoader)
+    .set('entry', baseOpts.entry)
+    .set('node', baseOpts.node);
 
   // set loaders config
   configInitializedObj.loaders()
@@ -160,12 +149,11 @@ export default function setCfg(configManager, configInitializedObj) {
       test: /\.json$/,
       loader: 'json-loader',
     })
-    .set('html', {
+    .set('htmlLoader', {
       test: /\.html?$/,
       loader: 'file-loader',
       query: loaderOpts.fileLoaderHtmlQuery,
     });
-
   // set plugins config
   configInitializedObj.plugins()
     .set('dedupePlugin', new webpack.optimize.DedupePlugin())

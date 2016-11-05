@@ -1,5 +1,13 @@
-module.exports = function(webpackConfig) {
-  webpackConfig.output.filename = "[name].js";
-  webpackConfig.plugins = [];
-  return webpackConfig;
+import webpack, { configManager } from '../../../src/helper';
+
+export default function customCfg() {
+  return () => { 
+    const obj = configManager.init();
+    obj.plugins().set('bannerPlugin', new webpack.BannerPlugin({
+      banner: 'atool-build',
+      entryOnly: true,
+    }));
+
+    return obj;
+  };
 }

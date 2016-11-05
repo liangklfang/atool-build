@@ -1,9 +1,9 @@
 import webpack from 'webpack';
-import loaderOpts from './loaders';
-import pluginOpts from './plugins';
+import getBaseOpts from './getBaseOpts';
+import getLoaderOpts from './getLoaderOpts';
+import getPluginOpts from './getPluginOpts';
 import Configuration from './configFactory/index';
 
-const opts = {};
-const configManager = new Configuration(opts);
+const configManager = new Configuration();
 
-export { webpack as default, loaderOpts, pluginOpts, configManager };
+export { webpack as default, getBaseOpts, getLoaderOpts, getPluginOpts, configManager };

@@ -3,14 +3,13 @@ import chalk from 'chalk';
 import existsSync from 'fs-exists-sync';
 import ExtractTextPlugin from 'extract-text-webpack-plugin';
 import MapJsonPlugin from 'map-json-webpack-plugin';
-
 import { resolve, join } from 'path';
 
-import loaderOpts from './loaders';
-import pluginOpts from './plugins';
-import { configManager } from './helper';
+import Configuration from './configFactory/index';
+import { configManager, getBaseOpts, getLoaderOpts, getPluginOpts } from './helper';
 
-function mergeCfgFromBin(args, cfgManager, configInitializedObj) {
+function mergeWebpackCfg(args, cfgObjBlock) {
+  const configInitializedObj = cfgObjBlock();
   const pkgPath = join(args.cwd, 'package.json');
   const pkg = existsSync(pkgPath) ? require(pkgPath) : {};// eslint-disable-line
 
@@ -33,10 +32,12 @@ function mergeCfgFromBin(args, cfgManager, configInitializedObj) {
     if (!(name in browser)) {
       return { ...obj, ...{ [name]: 'empty' } };
     }
+
     return obj;
   }, {});
 
-  configInitializedObj.base().modify('node', node);
+  Configuration.defaults.baseOpts.node = node;
+  configInitializedObj.base().modify('node', Configuration.defaults.baseOpts.node);
 
   let theme;
   if (pkg.theme && typeof pkg.theme === 'string') {
@@ -52,32 +53,44 @@ function mergeCfgFromBin(args, cfgManager, configInitializedObj) {
   }
 
   if (theme) {
-    cfgManager.loadersOpts.lessLoaderQuery.modifyVars = theme;
+    Configuration.defaults.loaderOpts.lessLoaderQuery.modifyVars = theme;
     const lessLoaderOpt = configInitializedObj.loaders().get('lessLoader');
-    lessLoaderOpt.loader.loader.pop().push({
+    const lessLoaderArray = lessLoaderOpt.loader.loader;
+    lessLoaderArray.pop();
+    lessLoaderArray.push({
       loader: 'less-loader',
-      query: cfgManager.loadersOpts.lessLoaderQuery,
+      query: Configuration.defaults.loaderOpts.lessLoaderQuery,
     });
+    lessLoaderOpt.loader.loader = lessLoaderArray;
     configInitializedObj.loaders()
-      .set('lessLoader', lessLoaderOpt);
+      .modify('lessLoader', lessLoaderOpt);
 
     const lessLoaderWithModule = configInitializedObj.loaders().get('lessLoaderWithModule');
-    lessLoaderWithModule.loader.loader.pop().push({
+    const lessLoaderWithModuleArray = lessLoaderWithModule.loader.loader;
+    lessLoaderWithModuleArray.pop();
+    lessLoaderWithModuleArray.push({
       loader: 'less-loader',
-      query: cfgManager.loadersOpts.lessLoaderQuery,
+      query: Configuration.defaults.loaderOpts.lessLoaderQuery,
     });
+    lessLoaderWithModule.loader.loader = lessLoaderWithModuleArray;
     configInitializedObj.loaders()
-      .set('lessLoaderWithModule', lessLoaderWithModule);
+      .modify('lessLoaderWithModule', lessLoaderWithModule);
   }
 
   if (pkg.entry) {
-    configInitializedObj.base().modify('entry', pkg.entry);
+    Configuration.defaults.baseOpts.entry = pkg.entry;
+    configInitializedObj.base().modify('entry', Configuration.defaults.baseOpts.entry);
   }
 
   if (args.outputPath) {
-    const output = configInitializedObj.base().get('output');
-    output.path = args.outputPath;
-    configInitializedObj.base().modify('output', output);
+    Configuration.defaults.baseOpts.output.path = args.outputPath;
+    configInitializedObj.base().modify('output', Configuration.defaults.baseOpts.output);
+  } else {
+    const opath = Configuration.defaults.baseOpts.output.path;
+    if (!opath) {
+      Configuration.defaults.baseOpts.output.path = join(args.cwd, './dist');
+      configInitializedObj.base().modify('output', Configuration.defaults.baseOpts.output);
+    }
   }
 
   if (args.hash) {
@@ -92,45 +105,53 @@ function mergeCfgFromBin(args, cfgManager, configInitializedObj) {
         assetsPath: pkg.name,
       }));
 
-    const output = configInitializedObj.base().get('output');
-    configInitializedObj.base().modify('output', {
-      ...output,
+    const moutput = {
+      ...Configuration.defaults.baseOpts.output,
       ...{
         filename: '[name]-[chunkhash].js',
         chunkFilename: '[name]-[chunkhash].js',
       },
-    });
+    };
+    Configuration.defaults.baseOpts.output = moutput;
+    configInitializedObj.base().modify('output', moutput);
   }
 
   if (args.publicPath) {
-    const output = configInitializedObj.base().get('output');
-    configInitializedObj.base().modify('output', {
-      ...output,
+    const moutput = {
+      ...Configuration.defaults.baseOpts.output,
       ...{
         publicPath: args.publicPath,
       },
-    });
+    };
+    Configuration.defaults.baseOpts.output = moutput;
+    configInitializedObj.base().modify('output', moutput);
   }
 
   if (args.devtool) {
-    configInitializedObj.base().modify('devtool', args.devtool);
+    Configuration.defaults.baseOpts.devtool = args.devtool;
+    configInitializedObj.base().modify('devtool', Configuration.defaults.baseOpts.devtool);
   }
 
   if (!args.compress) {
-    cfgManager.pluginOpts.loaderOptionsPluginOpts.minimize = false;
+    Configuration.defaults.pluginOpts.loaderOptionsPluginOpts.minimize = false;
 
     configInitializedObj.plugins()
       .remove('loaderOptionsPlugin')
-      .set('loaderOptionsPlugin', new webpack.LoaderOptionsPlugin(cfgManager.pluginOpts.loaderOptionsPluginOpts))
+      .set(
+        'loaderOptionsPlugin',
+        new webpack.LoaderOptionsPlugin(Configuration.defaults.pluginOpts.loaderOptionsPluginOpts)
+      )
       .remove('uglifyJsPlugin');
   }
 
   if (args.verbose) {
+    Configuration.defaults.baseOpts.profile = true;
     configInitializedObj.base().set('profile', true);
   }
 
   if (args.json) {
-    const roPath = resolve(args.cwd, 'build/records.json');
+    const roPath = join(args.cwd, args.json, 'records.json');
+    Configuration.defaults.baseOpts.recordsOutputPath = roPath;
     configInitializedObj.base()
       .set('recordsOutputPath', roPath);
     console.log('\n  webpack: the records json file will output at ->');
@@ -150,27 +171,30 @@ function mergeCfgFromBin(args, cfgManager, configInitializedObj) {
         }
       }));
   }
+
+  return configInitializedObj.resolveAll();
 }
 
 export default function build(args, callback) {
-  let configInitializedObj;
-  // check configManager is had initialized
-  if (configManager.isInitialized) {
-    const customConfigPath = resolve(args.cwd, args.config || 'webpack.config.js');
-    if (!existsSync(customConfigPath)) {
-      // error
-    }
+  let cfgIniObjBlocks;
+  const customConfigPath = resolve(args.cwd, args.config || 'webpack.config.js');
 
-    configInitializedObj = require(customConfigPath);// eslint-disable-line
+  if (existsSync(customConfigPath)) {
+    cfgIniObjBlocks = require(customConfigPath)(); // eslint-disable-line
+    cfgIniObjBlocks = Array.isArray(cfgIniObjBlocks) ? cfgIniObjBlocks : [cfgIniObjBlocks];
   } else {
-    configInitializedObj = configManager.init({
-      loaderOpts,
-      pluginOpts,
-    });
+    cfgIniObjBlocks = [
+      () => configManager.init({
+        baseOpts: getBaseOpts(), // eslint-disable-line
+        loaderOpts: getLoaderOpts(), // eslint-disable-line
+        pluginOpts: getPluginOpts(), // eslint-disable-line
+      }),
+    ];
   }
-  mergeCfgFromBin(args, configManager, configInitializedObj);
 
-  const webpackConfig = configInitializedObj.resolveAll();
+  function getFinalWebpackCfg(p, blocks) {
+    return blocks.map(block => mergeWebpackCfg(p, block));
+  }
 
   function doneHandler(err, stats) {
     const { errors } = stats.toJson();
@@ -211,6 +235,7 @@ export default function build(args, callback) {
     }
   }
 
+  const webpackConfig = getFinalWebpackCfg(args, cfgIniObjBlocks);
   // Run compiler.
   const compiler = webpack(webpackConfig);
 

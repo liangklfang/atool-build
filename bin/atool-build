@@ -12,11 +12,12 @@ program
   .option('--devtool <devtool>', 'sourcemap generate method, default is null')
   .option('--config <path>', 'custom config path, default is webpack.config.js')
   .option('--no-compress','build without compress')
-  .option('--json','running webpack with --json, ex. result.json')
+  .option('--json [path]','running webpack with --json')
   .option('--verbose', 'run with more logging messages.')
   .parse(process.argv);
 
 program.cwd = program.cwd || process.cwd();
+program.json = program.json || './dist';
 
 if (program.watch) {
   require('../lib/build')(program);

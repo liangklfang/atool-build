@@ -1,6 +1,10 @@
 import chalk from 'chalk';
 import ExtractTextPlugin from 'extract-text-webpack-plugin';
+import clone from 'lodash.clonedeep'
 import setCfg from '../config';
+import getBaseOpts from '../getBaseOpts';
+import getLoaderOpts from '../getLoaderOpts';
+import getPluginOpts from '../getPluginOpts';
 
 const _base = new WeakMap();
 const _loaders = new WeakMap();
@@ -19,7 +23,7 @@ function initialized(context) {
         },
         set(key, value) {
           if (Object.keys(baseCfg).indexOf(key) >= 0) {
-            console.log(`  ${chalk.yellow(key)} is existed, if you want to override use 'modify()' instead\n`);
+            console.warn(chalk.yellow(`warn: ${key} is existed, if you want to override use 'modify()' instead\n`));
 
             return this;
           }
@@ -30,7 +34,7 @@ function initialized(context) {
         },
         modify(key, value) {
           if (Object.keys(baseCfg).indexOf(key) < 0) {
-            console.log(`  ${chalk.yellow(key)} is not existed, if you want to add use 'set()' instead\n`);
+            console.warn(chalk.yellow(`warn: ${key} is not existed, if you want to add use 'set()' instead\n`));
 
             return this;
           }
@@ -41,7 +45,7 @@ function initialized(context) {
         },
         remove(key) {
           if (Object.keys(baseCfg).indexOf(key) < 0) {
-            console.log(`  ${chalk.yellow(key)} is not existed\n`);
+            console.warn(chalk.yellow(`warn: ${key} is not existed\n`));
 
             return this;
           }
@@ -62,7 +66,7 @@ function initialized(context) {
         },
         set(key, value) {
           if (Object.keys(pluginsCfg).indexOf(key) >= 0) {
-            console.log(`  ${chalk.yellow(key)} is existed, if you want to override use 'modify()' instead\n`);
+            console.warn(chalk.yellow(`warn: ${key} is existed, if you want to override use 'modify()' instead\n`));
 
             return this;
           }
@@ -73,7 +77,7 @@ function initialized(context) {
         },
         modify(key, value) {
           if (Object.keys(pluginsCfg).indexOf(key) < 0) {
-            console.log(`  ${chalk.yellow(key)} is not existed, if you want to add use 'set()' instead\n`);
+            console.warn(chalk.yellow(`warn: ${key} is not existed, if you want to add use 'set()' instead\n`));
 
             return this;
           }
@@ -84,7 +88,7 @@ function initialized(context) {
         },
         remove(key) {
           if (Object.keys(pluginsCfg).indexOf(key) < 0) {
-            console.log(`  ${chalk.yellow(key)} is not existed\n`);
+            console.warn(chalk.yellow(`warn: ${key} is not existed\n`));
 
             return this;
           }
@@ -105,7 +109,7 @@ function initialized(context) {
         },
         set(key, value) {
           if (Object.keys(loadersCfg).indexOf(key) >= 0) {
-            console.log(`  ${chalk.yellow(key)} is existed, if you want to override use 'modify()' instead\n`);
+            console.warn(chalk.yellow(`warn: ${key} is existed, if you want to override use 'modify()' instead\n`));
 
             return this;
           }
@@ -116,7 +120,7 @@ function initialized(context) {
         },
         modify(key, value) {
           if (Object.keys(loadersCfg).indexOf(key) < 0) {
-            console.log(`  ${chalk.yellow(key)} is not existed, if you want to add use 'set()' instead\n`);
+            console.warn(chalk.yellow(`warn: ${key} is not existed, if you want to add use 'set()' instead\n`));
 
             return this;
           }
@@ -127,7 +131,7 @@ function initialized(context) {
         },
         remove(key) {
           if (Object.keys(loadersCfg).indexOf(key) < 0) {
-            console.log(`  ${chalk.yellow(key)} is not existed\n`);
+            console.warn(chalk.yellow(`warn: ${key} is not existed\n`));
 
             return this;
           }
@@ -159,7 +163,7 @@ function initialized(context) {
         return prev;
       }, []);
 
-      return {
+      const webpackConfig = {
         ...base,
         ...{
           module: {
@@ -170,40 +174,51 @@ function initialized(context) {
           plugins: pluginList,
         },
       };
+
+      return webpackConfig;
     },
   };
 }
 
 export default class Configuration {
   static defaults = {
-    pluginOpts: {},
-    loaderOpts: {},
+    baseOpts: getBaseOpts(),
+    loaderOpts: getLoaderOpts(),
+    pluginOpts: getPluginOpts(),
   };
 
-  constructor(buildInOpts) {
-    Configuration.defaults = { ...Configuration.defaults, ...buildInOpts };
+  constructor() {
+    if (typeof Configuration.instance === 'object') {
+      return Configuration.instance;
+    }
     this.isInitialized = false;
-    this.pluginOpts = Configuration.defaults.pluginOpts;
-    this.loaderOpts = Configuration.defaults.loaderOpts;
     _base.set(this, {});
     _loaders.set(this, {});
     _plugins.set(this, {});
+
+    Configuration.instance = this;
+
+    return this;
   }
 
-  init(customOpts) {
+  init(customOpts = {}) {
     const self = this;
     if (self.isInitialized) {
-      console.log(chalk.red('Had been initialized'));
+      Configuration.defaults.baseOpts = getBaseOpts(); // eslint-disable-line
+      Configuration.defaults.loaderOpts = getLoaderOpts(); // eslint-disable-line
+      Configuration.defaults.pluginOpts = getPluginOpts(); // eslint-disable-line
 
-      return false;
+      _base.set(self, {});
+      _loaders.set(self, {});
+      _plugins.set(self, {});
     }
-    const options = { ...Configuration.defaults, ...customOpts };
+    Configuration.defaults = {
+      ...Configuration.defaults,
+      ...customOpts,
+    };
     self.isInitialized = true;
-    self.pluginOpts = options.pluginOpts;
-    self.loaderOpts = options.loaderOpts;
-
     const initObj = initialized(self);
-    setCfg(self, initObj);
+    setCfg(clone(Configuration.defaults), initObj);
 
     return initObj;
   }
