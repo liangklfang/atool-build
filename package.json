@@ -52,10 +52,7 @@
     "less": "~2.6.0",
     "less-loader": "^2.2.3",
     "less-plugin-npm-import": "^2.1.0",
-    "lodash.clone": "^4.5.0",
     "lodash.clonedeep": "^4.5.0",
-    "lodash.isplainobject": "^4.0.6",
-    "lodash.mergewith": "^4.6.0",
     "map-json-webpack-plugin": "~1.1.0",
     "postcss": "^5.2.0",
     "postcss-loader": "^0.13.0",
@@ -76,7 +73,9 @@
     "expect": "^1.20.2",
     "glob": "^7.0.6",
     "i18n-webpack-plugin": "^0.3.0",
-    "mocha": "^3.0.2"
+    "mocha": "^3.0.2",
+    "mocha-sinon": "^1.1.6",
+    "sinon": "^1.17.6"
   },
   "babel": {
     "presets": [

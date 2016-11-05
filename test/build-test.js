@@ -99,7 +99,7 @@ describe('lib/build', function () {
   it('should build publicPath', () => {
     return testBuild({publicPath: 'http:test.com/'}, 'build-publicPath');
   });
-  it('should build record json', () => {
+  xit('should build record json', () => {
     return testBuild({json:'./dist'}, 'build-record-json');
   });
 });
