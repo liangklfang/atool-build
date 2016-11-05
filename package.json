@@ -10,7 +10,8 @@
   "author": "chencheng <sorrycc@gmail.com>",
   "license": "MIT",
   "bin": {
-    "atool-build": "./bin/atool-build"
+    "atool-build": "./bin/atool-build",
+    "atool-compile": "./bin/atool-compile"
   },
   "files": [
     "bin",
