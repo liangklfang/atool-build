@@ -24,6 +24,8 @@ export default function getPluginOpts() {
       },
     },
 
+    postcssPluginList,
+
     loaderOptionsPluginOpts: {
       minimize: true,
       debug: true,

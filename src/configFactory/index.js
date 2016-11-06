@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ExtractTextPlugin from 'extract-text-webpack-plugin';
-import clone from 'lodash.clonedeep'
+import clone from 'lodash.clonedeep';
 import setCfg from '../config';
 import getBaseOpts from '../getBaseOpts';
 import getLoaderOpts from '../getLoaderOpts';

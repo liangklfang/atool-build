@@ -4,7 +4,7 @@ import ExtractTextPlugin from 'extract-text-webpack-plugin';
 
 export default function setCfg(opts, configInitializedObj) {
   const baseOpts = opts.baseOpts;
-  const pluginOpts = {...{}, ...opts.pluginOpts};
+  const pluginOpts = opts.pluginOpts;
   const loaderOpts = opts.loaderOpts;
   // set base config
   configInitializedObj.base()

@@ -48,6 +48,11 @@
     "file-loader": "^0.9.0",
     "find-cache-dir": "^0.1.1",
     "fs-exists-sync": "^0.1.0",
+    "gulp-babel": "^6.1.2",
+    "gulp-filter": "^4.0.0",
+    "gulp-less": "^3.2.0",
+    "gulp-postcss": "^6.2.0",
+    "gulp-rename": "^1.2.2",
     "json-loader": "^0.5.4",
     "less": "~2.6.0",
     "less-loader": "^2.2.3",
@@ -60,6 +65,7 @@
     "ts-loader": "^1.0.0-beta.1",
     "typescript": "^2.0.0",
     "url-loader": "^0.5.7",
+    "vinyl-fs": "^2.4.4",
     "webpack": "2.1.0-beta.25"
   },
   "devDependencies": {
@@ -70,8 +76,9 @@
     "coveralls": "^2.11.14",
     "eslint": "^3.8.0",
     "eslint-config-airbnb": "^12.0.0",
+    "eslint-plugin-import": "^2.1.0",
     "expect": "^1.20.2",
-    "glob": "^7.0.6",
+    "glob": "^7.1.1",
     "i18n-webpack-plugin": "^0.3.0",
     "mocha": "^3.0.2",
     "mocha-sinon": "^1.1.6",
@@ -83,7 +90,8 @@
       "stage-0"
     ],
     "plugins": [
-      "add-module-exports"
+      "add-module-exports",
+      "transform-runtime"
     ]
   }
 }

@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+
+var program = require('commander');
+var normalize = require('path').normalize;
+
+function list(val) {
+  return val.split(',');
+}
+program
+  .version(require('../package').version, '-v, --version')
+  .option('--cwd', 'current work dir')
+  .option('--include <includeList>', 'include compile files or dir relative path. "./src" by default.', list)
+  .option('--exclude <excludeList>', 'exclude compile files or dir relative path', list)
+  .option('--ouput-dir <outputDir>', 'output dir. "./lib" by default')
+  .parse(process.argv);
+
+program.cwd = program.cwd || process.cwd();
+program.include = program.include || ['./src/**/*.js', './src/**/*.jsx', './src/**/*.less'];
+program.exclude = program.exclude || [];
+program.outputDir = program.outputDir || './lib';
+
+require('../lib/transform/transform')(program);

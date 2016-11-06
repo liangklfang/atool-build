@@ -6,7 +6,7 @@ import MapJsonPlugin from 'map-json-webpack-plugin';
 import { resolve, join } from 'path';
 
 import Configuration from './configFactory/index';
-import { configManager, getBaseOpts, getLoaderOpts, getPluginOpts } from './helper';
+import { configManager } from './helper';
 
 function mergeWebpackCfg(args, cfgObjBlock) {
   const configInitializedObj = cfgObjBlock();
@@ -184,11 +184,7 @@ export default function build(args, callback) {
     cfgIniObjBlocks = Array.isArray(cfgIniObjBlocks) ? cfgIniObjBlocks : [cfgIniObjBlocks];
   } else {
     cfgIniObjBlocks = [
-      () => configManager.init({
-        baseOpts: getBaseOpts(), // eslint-disable-line
-        loaderOpts: getLoaderOpts(), // eslint-disable-line
-        pluginOpts: getPluginOpts(), // eslint-disable-line
-      }),
+      () => configManager.init(),
     ];
   }
 
