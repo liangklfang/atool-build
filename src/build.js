@@ -169,7 +169,8 @@ function mergeWebpackCfg(args, cfgObjBlock) {
         } else if (percentage === 1) {
           console.log(chalk.green('\nwebpack: bundle build is now finished.'));
         }
-      }));
+      }))
+      .remove('dedupePlugin');
   }
 
   return configInitializedObj.resolveAll();

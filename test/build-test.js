@@ -1,13 +1,15 @@
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { readFileSync } from 'fs';
+
 import glob from 'glob';
-import build from '../src/build';
 import expect from 'expect';
+import existsSync from 'fs-exists-sync';
+
+import build from '../src/build';
 
 function assert(actualDir, _expect) {
   const expectDir = join(__dirname, 'expect', _expect);
   const actualFiles = glob.sync('**/*', { cwd: actualDir, nodir: true });
-
   actualFiles.forEach(file => {
     const actualFile = readFileSync(join(actualDir, file), 'utf-8');
     const expectFile = readFileSync(join(expectDir, file), 'utf-8');
@@ -15,7 +17,7 @@ function assert(actualDir, _expect) {
   });
 }
 
-function testBuild(args, fixture) {
+function testBuild(args, fixture, insteadBuildInAssert) {
   return new Promise(resolve => {
     const cwd = join(__dirname, 'fixtures', fixture);
     const dist = args.outputPath || 'dist';
@@ -29,7 +31,11 @@ function testBuild(args, fixture) {
 
     build({...defaultConfig, ...args}, err => {
       if (err) throw new Error(err);
-      assert(outputPath, fixture);
+      if (insteadBuildInAssert) {
+        insteadBuildInAssert(outputPath);
+      } else {
+        assert(outputPath, fixture);
+      }   
       resolve();
     });
   });
@@ -99,7 +105,10 @@ describe('lib/build', function () {
   it('should build publicPath', () => {
     return testBuild({publicPath: 'http:test.com/'}, 'build-publicPath');
   });
-  xit('should build record json', () => {
-    return testBuild({json:'./dist'}, 'build-record-json');
+  it('should build record json', () => {
+    return testBuild({json:'./dist'}, 'build-record-json', (outputPath) => {
+      const isExisted = existsSync(resolve(outputPath, './records.json'));
+      expect(isExisted).toEqual(true);
+    });
   });
 });

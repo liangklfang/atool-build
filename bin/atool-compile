@@ -2,6 +2,8 @@
 
 var program = require('commander');
 var normalize = require('path').normalize;
+var chalk = require('chalk');
+var resolve = require('path').resolve;
 
 function list(val) {
   return val.split(',');
@@ -12,6 +14,7 @@ program
   .option('--include <includeList>', 'include compile files or dir relative path. "./src" by default.', list)
   .option('--exclude <excludeList>', 'exclude compile files or dir relative path', list)
   .option('--ouput-dir <outputDir>', 'output dir. "./lib" by default')
+  .option('--config <path>', 'custom config path, default is webpack.config.js')
   .parse(process.argv);
 
 program.cwd = program.cwd || process.cwd();
@@ -19,4 +22,10 @@ program.include = program.include || ['./src/**/*.js', './src/**/*.jsx', './src/
 program.exclude = program.exclude || [];
 program.outputDir = program.outputDir || './lib';
 
-require('../lib/transform/transform')(program);
+require('../lib/transform/transform')(program, function(err) {
+  if (err) {
+    console.log(chalk.red(err));
+    return;
+  }
+  console.log(chalk.green('output ' + resolve(program.cwd, program.outputDir)));
+}).then(() => { }).then((err) => { });
