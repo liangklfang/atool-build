@@ -7,6 +7,8 @@ import { join, resolve } from 'path';
 import rucksack from 'rucksack-css';
 import autoprefixer from 'autoprefixer';
 
+/* eslint quotes:0 */
+
 export default function getWebpackCommonConfig(args) {
   const pkgPath = join(args.cwd, 'package.json');
   const pkg = existsSync(pkgPath) ? require(pkgPath) : {};
@@ -90,32 +92,33 @@ export default function getWebpackCommonConfig(args) {
         {
           test: /\.js$/,
           exclude: /node_modules/,
-          loader: 'babel',
+          loader: require.resolve('babel-loader'),
           query: babelQuery,
         },
         {
           test: /\.jsx$/,
-          loader: 'babel',
+          loader: require.resolve('babel-loader'),
           query: babelQuery,
         },
         {
           test: /\.tsx?$/,
-          loaders: ['babel', 'ts'],
+          loaders: [require.resolve('babel-loader'), require.resolve('ts-loader')],
         },
         {
           test(filePath) {
             return /\.css$/.test(filePath) && !/\.module\.css$/.test(filePath);
           },
           loader: ExtractTextPlugin.extract(
-            'css?sourceMap&-restructuring&-autoprefixer!' +
-            'postcss-loader'
+            `${require.resolve('css-loader')}` +
+            `?sourceMap&-restructuring&-autoprefixer!${require.resolve('postcss-loader')}`
           ),
         },
         {
           test: /\.module\.css$/,
           loader: ExtractTextPlugin.extract(
-            'css?sourceMap&-restructuring&modules&localIdentName=[local]___[hash:base64:5]&-autoprefixer!' +
-            'postcss-loader'
+            `${require.resolve('css-loader')}` +
+            `?sourceMap&-restructuring&modules&localIdentName=[local]___[hash:base64:5]&-autoprefixer!` +
+            `${require.resolve('postcss-loader')}`
           ),
         },
         {
@@ -123,27 +126,48 @@ export default function getWebpackCommonConfig(args) {
             return /\.less$/.test(filePath) && !/\.module\.less$/.test(filePath);
           },
           loader: ExtractTextPlugin.extract(
-            'css?sourceMap&-autoprefixer!' +
-            'postcss-loader!' +
-            `less-loader?{"sourceMap":true,"modifyVars":${JSON.stringify(theme)}}`
+            `${require.resolve('css-loader')}?sourceMap&-autoprefixer!` +
+            `${require.resolve('postcss-loader')}!` +
+            `${require.resolve('less-loader')}?{"sourceMap":true,"modifyVars":${JSON.stringify(theme)}}`
           ),
         },
         {
           test: /\.module\.less$/,
           loader: ExtractTextPlugin.extract(
-            'css?sourceMap&modules&localIdentName=[local]___[hash:base64:5]&-autoprefixer!' +
-            'postcss-loader!' +
-            `less-loader?{"sourceMap":true,"modifyVars":${JSON.stringify(theme)}}`
+            `${require.resolve('css-loader')}?` +
+            `sourceMap&modules&localIdentName=[local]___[hash:base64:5]&-autoprefixer!` +
+            `${require.resolve('postcss-loader')}!` +
+            `${require.resolve('less-loader')}?` +
+            `{"sourceMap":true,"modifyVars":${JSON.stringify(theme)}}`
           ),
         },
-        { test: /\.woff(\?v=\d+\.\d+\.\d+)?$/, loader: 'url?limit=10000&minetype=application/font-woff' },
-        { test: /\.woff2(\?v=\d+\.\d+\.\d+)?$/, loader: 'url?limit=10000&minetype=application/font-woff' },
-        { test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, loader: 'url?limit=10000&minetype=application/octet-stream' },
-        { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, loader: 'file' },
-        { test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: 'url?limit=10000&minetype=image/svg+xml' },
-        { test: /\.(png|jpg|jpeg|gif)(\?v=\d+\.\d+\.\d+)?$/i, loader: 'url?limit=10000' },
-        { test: /\.json$/, loader: 'json' },
-        { test: /\.html?$/, loader: 'file?name=[name].[ext]' },
+        {
+          test: /\.woff(\?v=\d+\.\d+\.\d+)?$/,
+          loader: `${require.resolve('url-loader')}?` +
+          `limit=10000&minetype=application/font-woff`,
+        },
+        {
+          test: /\.woff2(\?v=\d+\.\d+\.\d+)?$/,
+          loader: `${require.resolve('url-loader')}?` +
+          `limit=10000&minetype=application/font-woff`,
+        },
+        {
+          test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/,
+          loader: `${require.resolve('url-loader')}?` +
+          `limit=10000&minetype=application/octet-stream`,
+        },
+        { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, loader: `${require.resolve('file-loader')}` },
+        {
+          test: /\.svg(\?v=\d+\.\d+\.\d+)?$/,
+          loader: `${require.resolve('url-loader')}?` +
+          `limit=10000&minetype=image/svg+xml`,
+        },
+        {
+          test: /\.(png|jpg|jpeg|gif)(\?v=\d+\.\d+\.\d+)?$/i,
+          loader: `${require.resolve('url-loader')}?limit=10000`,
+        },
+        { test: /\.json$/, loader: `${require.resolve('json-loader')}` },
+        { test: /\.html?$/, loader: `${require.resolve('file-loader')}?name=[name].[ext]` },
       ],
     },
 
