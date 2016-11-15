@@ -61,8 +61,11 @@ function getWebpackConfig(args) {
     ];
   }
 
-  webpackConfig = mergeCustomConfig(webpackConfig, resolve(args.cwd, args.config || 'webpack.config.js'));
-
+  if (typeof args.config === 'function') {
+    webpackConfig = args.config(webpackConfig) || webpackConfig;
+  } else {
+    webpackConfig = mergeCustomConfig(webpackConfig, resolve(args.cwd, args.config || 'webpack.config.js'));
+  }
   return webpackConfig;
 }
 
