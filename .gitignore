@@ -6,4 +6,4 @@ test/fixtures/**/dist
 coverage
 lib
 npm-debug.log
-
+*.lock

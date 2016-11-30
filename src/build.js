@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import mergeCustomConfig from './mergeCustomConfig';
 import getWebpackCommonConfig from './getWebpackCommonConfig';
 
-function getWebpackConfig(args) {
+function getWebpackConfig(args, cache) {
   let webpackConfig = getWebpackCommonConfig(args);
 
   webpackConfig.plugins = webpackConfig.plugins || [];
@@ -57,6 +57,7 @@ function getWebpackConfig(args) {
     webpackConfig.plugins = [...webpackConfig.plugins,
       require('map-json-webpack-plugin')({
         assetsPath: pkg.name,
+        cache,
       }),
     ];
   }
@@ -71,7 +72,7 @@ function getWebpackConfig(args) {
 
 export default function build(args, callback) {
   // Get config.
-  let webpackConfig = getWebpackConfig(args);
+  let webpackConfig = getWebpackConfig(args, {});
   webpackConfig = Array.isArray(webpackConfig) ? webpackConfig : [webpackConfig];
 
   let fileOutputPath;
