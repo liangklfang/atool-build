@@ -17,6 +17,7 @@ program
 
 program.cwd = process.cwd();
 
+//如果是监听状态，也就是watch，那么执行'/lib/build'
 if (program.watch) {
   require('../lib/build')(program);
 } else {

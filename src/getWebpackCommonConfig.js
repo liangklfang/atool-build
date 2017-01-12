@@ -6,17 +6,34 @@ import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 import rucksack from 'rucksack-css';
 import autoprefixer from 'autoprefixer';
+/*
+(1)调用方式如下：
+   let webpackConfig = getWebpackCommonConfig(args);其中args是通过进程传过来的，也就是解析process.argv
+(2)如果传入的参数有hash，那么我们会对css/js和普通文件名进行修改，而且这里采用的是chunkHash
+   const jsFileName = args.hash ? '[name]-[chunkhash].js' : '[name].js';
+   const cssFileName = args.hash ? '[name]-[chunkhash].css' : '[name].css';
+   const commonName = args.hash ? 'common-[chunkhash].js' : 'common.js';
+(3)获取babel特定的配置信息，cacheDirectory，presets，plugins
+(4)getTSCommonConfig返回如下内容：
+    return {
+      target: 'es6',
+      jsx: 'preserve',
+      moduleResolution: 'node',
+      declaration: false,//设置为false
+      sourceMap: true,
+    };
+(5)获取package.json中配置的theme，如果theme是string，那么表示是路径，如果是相对路径那么转化为绝对路径并获取
+  该路径的文件内容，并调用默认theme文件默认导出的方法！如果配置的是一个对象，那么表示这个对象就是theme!
+(6)读取package.json中的browser对象
 
-/* eslint quotes:0 */
 
+*/
 export default function getWebpackCommonConfig(args) {
   const pkgPath = join(args.cwd, 'package.json');
   const pkg = existsSync(pkgPath) ? require(pkgPath) : {};
-
   const jsFileName = args.hash ? '[name]-[chunkhash].js' : '[name].js';
   const cssFileName = args.hash ? '[name]-[chunkhash].css' : '[name].css';
   const commonName = args.hash ? 'common-[chunkhash].js' : 'common.js';
-
   const babelQuery = getBabelCommonConfig();
   const tsQuery = getTSCommonConfig();
   tsQuery.declaration = false;
@@ -48,8 +65,8 @@ export default function getWebpackCommonConfig(args) {
   ];
 
   const browser = pkg.browser || {};
-
   const node = emptyBuildins.reduce((obj, name) => {
+    //如果browser里面没有这个模块，那么我们会把obj对象上这个模块的信息设置为'empty'字符串
     if (!(name in browser)) {
       return { ...obj, ...{ [name]: 'empty' } };
     }
@@ -58,7 +75,6 @@ export default function getWebpackCommonConfig(args) {
 
 
   return {
-
     babel: babelQuery,
     ts: {
       transpileOnly: true,
@@ -71,11 +87,13 @@ export default function getWebpackCommonConfig(args) {
       chunkFilename: jsFileName,
     },
 
-    devtool: args.devtool,
+    devtool: args.devtool,//source-map
 
     resolve: {
       modulesDirectories: ['node_modules', join(__dirname, '../node_modules')],
+      //本层级的node_modules和上一级node_modules
       extensions: ['', '.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.ts', '.tsx', '.js', '.jsx', '.json'],
+      //扩展名
     },
 
     resolveLoader: {
@@ -83,11 +101,12 @@ export default function getWebpackCommonConfig(args) {
     },
 
     entry: pkg.entry,
+    //package.json中配置的entry对象
 
     node,
 
     module: {
-      noParse: [/moment.js/],
+      noParse: [/moment.js/],//不解析moment.js
       loaders: [
         {
           test: /\.js$/,
@@ -180,11 +199,14 @@ export default function getWebpackCommonConfig(args) {
 
     plugins: [
       new webpack.optimize.CommonsChunkPlugin('common', commonName),
+      //公共模块名字
       new ExtractTextPlugin(cssFileName, {
         disable: false,
         allChunks: true,
       }),
+      //css文件名字
       new webpack.optimize.OccurenceOrderPlugin(),
+      //顺序触发的插件
     ],
   };
 }
